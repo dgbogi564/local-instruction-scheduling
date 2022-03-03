@@ -19,6 +19,7 @@ void PrintInstructionList(FILE * outfile, Instruction * instr);
 Instruction *ReadInstruction(FILE * infile);
 Instruction *ReadInstructionList(FILE * infile);
 Instruction *LastInstruction(Instruction * instr);
+void CalculateInstructionListWeights(Instruction * InstrList);
 void DestroyInstructionList(Instruction * instr);
 
 #endif

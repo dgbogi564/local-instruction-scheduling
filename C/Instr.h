@@ -10,7 +10,7 @@
 #ifndef INSTR_H
 #define INSTR_H
 
-typedef enum {LOADI, LOADAI, LOADAO, STOREAI, STOREAO, ADD, SUB, MUL, DIV, LSHIFTI, RSHIFTI, OUTPUTAI} OpCode;
+typedef enum {LOADI, LOADAI, STOREAI, ADD, SUB, MUL, DIV, OUTPUTAI} OpCode;
 
 typedef struct InstructionInfo Instruction;
 
@@ -19,8 +19,13 @@ struct InstructionInfo {
 	int field1;
 	int field2;
 	int field3;
+    int cycles;
+    int weight;
 	Instruction *prev;	/* previous instruction */
 	Instruction *next;	/* next instruction */
+    Instruction *dep1;  /* first dependency of instruction */
+    Instruction *dep2;  /* second dependency of instruction */
+    Instruction *anti;  /* anti-dependency of instruction */
 };
 
 #endif

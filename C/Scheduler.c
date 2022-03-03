@@ -17,6 +17,18 @@
 #include "InstrUtils.h"
 #include "Utils.h"
 
+void longestLatencyPath(Instruction *InstrList) {
+
+}
+
+void highestLatencyPath(Instruction *InstrList) {
+
+}
+
+// TODO
+void myOwn(Instruction *InstrList) {
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -34,15 +46,19 @@ int main(int argc, char *argv[])
         InstrList = ReadInstructionList(stdin);
  
         if (!strcmp(argv[1], "-a")) {
-	  fprintf(stderr, "   HEURISTIC: longest latency weighted path\n\n"); 
+	  fprintf(stderr, "   HEURISTIC: longest latency weighted path\n\n");
+      longestLatencyPath(InstrList);
 	} else
         if (!strcmp(argv[1], "-b")) {
-	  fprintf(stderr, "    HEUTISTIC: highest latency instruction\n\n"); 
+	  fprintf(stderr, "    HEURISTIC: highest latency instruction\n\n");
+      highestLatencyPath(InstrList);
 	} else
+        // TODO
         if (!strcmp(argv[1], "-c")) {
-	  fprintf(stderr, "        HEURISTIC: my own\n\n"); 
+	  fprintf(stderr, "    HEURISTIC: my own\n\n");
+      myOwn(InstrList);
 	} else  {
-	  ERROR(" INVALID HEURISTIC: Use of command:\n  schedule -a/b/c < ILOC file\n");
+	  ERROR("INVALID HEURISTIC: Use of command:\n  schedule -a/b/c < ILOC file\n");
 	  exit(EXIT_FAILURE);
 	}
 
