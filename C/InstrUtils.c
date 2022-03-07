@@ -59,6 +59,21 @@ void PrintInstruction(FILE * outfile, Instruction * instr)
 	}
 }
 
+Instruction *InitInstruction() {
+    Instruction *instr = (Instruction *) calloc(1, sizeof(Instruction));
+    if (!instr) {
+        ERROR("Calloc failed\n");
+        exit(EXIT_FAILURE);
+    }
+    instr->prev = NULL;
+    instr->next = NULL;
+    instr->dep1 = NULL;
+    instr->dep2 = NULL;
+    instr->anti = NULL;
+    instr->visited = 0;
+    return instr;
+}
+
 void PrintInstructionList(FILE * outfile, Instruction * instr)
 {
 	Instruction *prev;
@@ -81,16 +96,7 @@ Instruction *ReadInstruction(FILE * infile)
 		ERROR("File error\n");
 		exit(EXIT_FAILURE);
 	}
-	instr = (Instruction *) calloc(1, sizeof(Instruction));
-	if (!instr) {
-		ERROR("Calloc failed\n");
-		exit(EXIT_FAILURE);
-	}
-	instr->prev = NULL;
-	instr->next = NULL;
-    instr->dep1 = NULL;
-    instr->dep2 = NULL;
-    instr->anti = NULL;
+	instr = InitInstruction();
 	fscanf(infile, "%99s", InstrBuffer);
 	if (strnlen(InstrBuffer, sizeof(InstrBuffer)) == 0) {
 		free(instr);
@@ -224,13 +230,13 @@ void CalculateInstructionListWeights(Instruction * InstrList)
 {
     Instruction *instr = LastInstruction(InstrList);
     do {
-        if(!instr->weight) {
+        if (!instr->weight) {
             instr->weight = instr->cycles;
         }
         Instruction *i = instr;
-        Dependency dep1 = {0};
-        Dependency dep2 = {0};
-        Dependency anti = {0};
+        Dependency dep1 = {-1, 0};
+        Dependency dep2 = {-1, 0};
+        Dependency anti = {-1, 0};
         int get_dep1, get_dep2, get_anti;
 
         switch(instr->opcode) {
@@ -240,14 +246,16 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                 break;
             case LOADAI:
                 /* registers */
-                anti.value = instr->field1;
+                dep1.value = instr->field1;
+                anti.value = instr->field3;
                 /* memory location offsets */
-                dep1.value = instr->field2;
-                dep1.isMemoryLocationOffset = 1;
+                dep2.value = instr->field2;
+                dep2.isMemoryLocationOffset = 1;
                 break;
             case STOREAI:
                 /* registers */
                 dep1.value = instr->field1;
+                dep2.value = instr->field2;
                 /* memory location offsets */
                 anti.value = instr->field3;
                 anti.isMemoryLocationOffset = 1;
@@ -271,9 +279,9 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                 return;
         }
 
-        get_dep1 = dep1.value > 0;
-        get_dep2 = dep2.value > 0;
-        get_anti = anti.value > 0;
+        get_dep1 = dep1.value >= 0;
+        get_dep2 = dep2.value >= 0;
+        get_anti = anti.value >= 0;
         /* search for the dependencies and anti-dependencies of the current instruction */
         while ((i = i->prev) && (get_dep1 || get_dep2 || get_anti)) {
             /* dependencies */
@@ -286,14 +294,15 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                             i->weight = instr->weight + i->cycles;
                         }
                         get_dep1 = 0;
-                    } else if (get_dep2 && dep2.isMemoryLocationOffset && dep2.value == i->field3) {
+                    }
+                    if (get_dep2 && dep2.isMemoryLocationOffset && dep2.value == i->field3) {
                         instr->dep2 = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
                         }
                         get_dep2 = 0;
                     }
-                    /* writes to a register */
+                /* writes to a register */
                 case LOADI:
                     if (get_dep1 && !dep1.isMemoryLocationOffset && dep1.value == i->field2) {
                         instr->dep1 = i;
@@ -301,7 +310,8 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                             i->weight = instr->weight + i->cycles;
                         }
                         get_dep1 = 0;
-                    } else if (get_dep2 && !dep2.isMemoryLocationOffset && dep2.value == i->field2) {
+                    }
+                    if (get_dep2 && !dep2.isMemoryLocationOffset && dep2.value == i->field2) {
                         instr->dep2 = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
@@ -320,7 +330,8 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                             i->weight = instr->weight + i->cycles;
                         }
                         get_dep1 = 0;
-                    } else if (get_dep2 && !dep2.isMemoryLocationOffset && dep2.value == i->field3) {
+                    }
+                    if (get_dep2 && !dep2.isMemoryLocationOffset && dep2.value == i->field3) {
                         instr->dep2 = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
@@ -328,7 +339,7 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         get_dep2 = 0;
                     }
                     break;
-                    /* does not write */
+                /* does not write */
                 case OUTPUTAI:
                     break;
                 default:
@@ -349,7 +360,7 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         get_anti = 0;
                     }
                     break;
-                    /* reads from a register */
+                /* reads from a register */
                 case STOREAI:
                     if (get_anti && !anti.isMemoryLocationOffset && anti.value == i->field1) {
                         instr->anti = i;
@@ -371,7 +382,7 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         get_anti = 0;
                     }
                     break;
-                    /* does not read */
+                /* does not read */
                 case LOADI:
                     break;
                 default:
@@ -379,7 +390,7 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                     return;
             }
         }
-    } while((instr = instr->prev));
+    } while ((instr = instr->prev));
 }
 
 Instruction *ReadInstructionList(FILE * infile)
@@ -427,4 +438,134 @@ void DestroyInstructionList(Instruction * instr)
 		instr = instr->next;
 		free(i);
 	}
+}
+
+InstructionNode *InitInstructionNode(Instruction * instr, int earliestCycleCanRun)
+{
+    InstructionNode *InstrNode = (InstructionNode *) calloc(1, sizeof(InstructionNode));
+    if (!InstrNode) {
+        ERROR("Calloc failed\n");
+        exit(EXIT_FAILURE);
+    }
+    InstrNode->earliestCycleCanRun = earliestCycleCanRun;
+    InstrNode->instr = instr;
+    InstrNode->next = NULL;
+    return InstrNode;
+}
+
+void DestroyInstructionNode(InstructionNode * node) {
+    free(node);
+}
+
+InstructionQueue *InitInstructionQueue()
+{
+    InstructionQueue *InstrQueue = (InstructionQueue *) calloc(1, sizeof(InstructionQueue));
+    if (!InstrQueue) {
+        ERROR("Calloc failed\n");
+        exit(EXIT_FAILURE);
+    }
+    InstrQueue->head = NULL;
+    InstrQueue->tail = NULL;
+    InstrQueue->size = 0;
+    return InstrQueue;
+}
+
+void Enqueue(InstructionQueue * InstrQueue, Instruction * instr, Heuristic HEURISTIC, int earliestCycleCanRun)
+{
+    InstructionNode *InstrNode = InitInstructionNode(instr, earliestCycleCanRun);
+    if (!InstrQueue->size) {
+        InstrQueue->head = InstrQueue->tail = InstrNode;
+        InstrQueue->size++;
+        return;
+    }
+    InstructionNode *i = InstrQueue->head;
+    switch(HEURISTIC) {
+        case LONGEST_LATENCY_PATH:
+            if (instr->weight > i->instr->weight || (instr->weight == i->instr->weight && instr->cycles > i->instr->cycles)) {
+                InstrNode->next = i;
+                InstrQueue->head = InstrNode;
+            }
+            while (i->next != NULL && instr->weight <= i->next->instr->weight) {
+                i = i->next;
+            }
+            break;
+        case HIGHEST_LATENCY_INSTRUCTION:
+            if (instr->cycles > i->instr->cycles) {
+                InstrNode->next = i;
+                InstrQueue->head = InstrNode;
+            }
+            while (i->next != NULL && instr->cycles <= i->next->instr->cycles) {
+                i = i->next;
+            }
+            break;
+        case MY_OWN:
+            break;
+        default:
+            ERROR("Illegal heuristic\n");
+    }
+    if (InstrQueue->head != InstrNode) {
+        InstrNode->next = i->next;
+        i->next = InstrNode;
+        if(!InstrNode->next) {
+            InstrQueue->tail = InstrNode;
+        }
+    }
+    InstrQueue->size++;
+}
+
+Instruction *Dequeue(InstructionQueue * InstrQueue, int *cycle)
+{
+    if (!InstrQueue->size) {
+        return NULL;
+    }
+
+    InstructionNode *InstrNode, *lowestCycleInstrNode;
+    InstrNode = lowestCycleInstrNode = InstrQueue->head;
+    while (InstrNode != NULL) {
+        if (InstrNode->earliestCycleCanRun <= *cycle) {
+            break;
+        }
+        if (lowestCycleInstrNode->earliestCycleCanRun > InstrNode->earliestCycleCanRun) {
+            lowestCycleInstrNode = InstrNode;
+        }
+        InstrNode = InstrNode->next;
+    }
+    if (!InstrNode) {
+        InstrNode = lowestCycleInstrNode;
+    }
+    *cycle = InstrNode->earliestCycleCanRun + 1;
+
+    Instruction *instr = InstrNode->instr;
+    RemoveNode(InstrQueue, InstrNode);
+    return instr;
+}
+
+void RemoveNode(InstructionQueue * InstrQueue, InstructionNode *InstrNode) {
+    if (!InstrQueue->size || !InstrNode) {
+        return;
+    }
+    InstructionNode  *i = InstrQueue->head;
+    if (i == InstrNode) {
+        InstrQueue->head = i->next;
+    }
+    while (i->next != NULL) {
+        if (i->next == InstrNode) {
+            i->next = InstrNode->next;
+            break;
+        }
+        i = i->next;
+    }
+    DestroyInstructionNode(InstrNode);
+    InstrQueue->size--;
+}
+
+void DestroyInstructionQueue(InstructionQueue * InstrQueue)
+{
+    InstructionNode *InstrNode = InstrQueue->head, *temp;
+    while(InstrNode) {
+        temp = InstrNode;
+        InstrNode = InstrNode->next;
+        DestroyInstructionNode(temp);
+    }
+    free(InstrQueue);
 }
