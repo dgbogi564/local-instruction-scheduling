@@ -90,15 +90,14 @@ int main(int argc, char *argv[])
         fprintf(stderr, "   HEURISTIC: longest latency weighted path\n\n");
         InstrList = Schedule(InstrList, LONGEST_LATENCY_PATH);
     } else
-    if (!strcmp(argv[1], "-b")) {
+        if (!strcmp(argv[1], "-b")) {
         fprintf(stderr, "    HEURISTIC: highest latency instruction\n\n");
         InstrList = Schedule(InstrList, HIGHEST_LATENCY_INSTRUCTION);
     } else
-        // TODO
-    if (!strcmp(argv[1], "-c")) {
-        fprintf(stderr, "    HEURISTIC: my own\n\n");
-        InstrList = Schedule(InstrList, MY_OWN);
-    } else  {
+        if (!strcmp(argv[1], "-c")) {
+        fprintf(stderr, "         HEURISTIC: dependence height\n\n");
+        InstrList = Schedule(InstrList, DEPENDENCE_HEIGHT);
+    } else {
         ERROR("INVALID HEURISTIC: Use of command:\n  schedule -a/b/c < ILOC file\n");
         exit(EXIT_FAILURE);
     }

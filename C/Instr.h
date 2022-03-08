@@ -11,7 +11,7 @@
 #define INSTR_H
 
 typedef enum {LOADI, LOADAI, STOREAI, ADD, SUB, MUL, DIV, OUTPUTAI} OpCode;
-typedef enum {LONGEST_LATENCY_PATH, HIGHEST_LATENCY_INSTRUCTION, MY_OWN} Heuristic;
+typedef enum {LONGEST_LATENCY_PATH, HIGHEST_LATENCY_INSTRUCTION, DEPENDENCE_HEIGHT} Heuristic;
 
 typedef struct InstructionInfo Instruction;
 typedef struct InstructionNode InstructionNode;
@@ -24,6 +24,7 @@ struct InstructionInfo {
 	int field3;
     int cycles;
     int weight;
+    int height;
     int visited;
 	Instruction *prev;	/* previous instruction */
 	Instruction *next;	/* next instruction */

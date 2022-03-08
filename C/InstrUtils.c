@@ -226,12 +226,13 @@ struct Dependency {
     int value;
     int isMemoryLocationOffset;
 };
-void CalculateInstructionListWeights(Instruction * InstrList)
+void CalculateInstructionListWeightsAndHeights(Instruction * InstrList)
 {
     Instruction *instr = LastInstruction(InstrList);
     do {
         if (!instr->weight) {
             instr->weight = instr->cycles;
+            instr->height = 1;
         }
         Instruction *i = instr;
         Dependency dep1 = {-1, 0};
@@ -293,12 +294,18 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
                         }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
+                        }
                         get_dep1 = 0;
                     }
                     if (get_dep2 && dep2.isMemoryLocationOffset && dep2.value == i->field3) {
                         instr->dep2 = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
+                        }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
                         }
                         get_dep2 = 0;
                     }
@@ -309,12 +316,18 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
                         }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
+                        }
                         get_dep1 = 0;
                     }
                     if (get_dep2 && !dep2.isMemoryLocationOffset && dep2.value == i->field2) {
                         instr->dep2 = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
+                        }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
                         }
                         get_dep2 = 0;
                     }
@@ -329,12 +342,18 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
                         }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
+                        }
                         get_dep1 = 0;
                     }
                     if (get_dep2 && !dep2.isMemoryLocationOffset && dep2.value == i->field3) {
                         instr->dep2 = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
+                        }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
                         }
                         get_dep2 = 0;
                     }
@@ -357,6 +376,9 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
                         }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
+                        }
                         get_anti = 0;
                     }
                     break;
@@ -366,6 +388,9 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         instr->anti = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
+                        }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
                         }
                         get_anti = 0;
                     }
@@ -378,6 +403,9 @@ void CalculateInstructionListWeights(Instruction * InstrList)
                         instr->anti = i;
                         if (i->weight < instr->weight + i->cycles) {
                             i->weight = instr->weight + i->cycles;
+                        }
+                        if (i->height < instr->height + 1) {
+                            i->height = instr->height + 1;
                         }
                         get_anti = 0;
                     }
@@ -408,11 +436,10 @@ Instruction *ReadInstructionList(FILE * infile)
 			continue;
 		}
 		instr->prev = tail;
-		instr->next = NULL;
 		tail->next = instr;
 		tail = instr;
 	}
-    CalculateInstructionListWeights(head);
+    CalculateInstructionListWeightsAndHeights(head);
 	return head;
 }
 
@@ -498,7 +525,14 @@ void Enqueue(InstructionQueue * InstrQueue, Instruction * instr, Heuristic HEURI
                 i = i->next;
             }
             break;
-        case MY_OWN:
+        case DEPENDENCE_HEIGHT:
+            if (instr->height > i->instr->height) {
+                InstrNode->next = i;
+                InstrQueue->head = InstrNode;
+            }
+            while (i->next != NULL && instr->height <= i->next->instr->height) {
+                i = i->next;
+            }
             break;
         default:
             ERROR("Illegal heuristic\n");
