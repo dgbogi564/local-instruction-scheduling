@@ -71,6 +71,7 @@ Instruction *InitInstruction() {
     instr->dep2 = NULL;
     instr->anti = NULL;
     instr->visited = 0;
+    instr->earliestCycleCanRun = 0;
     return instr;
 }
 
@@ -309,6 +310,7 @@ void CalculateInstructionListWeightsAndHeights(Instruction * InstrList)
                         }
                         get_dep2 = 0;
                     }
+                    break;
                 /* writes to a register */
                 case LOADI:
                     if (get_dep1 && !dep1.isMemoryLocationOffset && dep1.value == i->field2) {
@@ -467,14 +469,13 @@ void DestroyInstructionList(Instruction * instr)
 	}
 }
 
-InstructionNode *InitInstructionNode(Instruction * instr, int earliestCycleCanRun)
+InstructionNode *InitInstructionNode(Instruction * instr)
 {
     InstructionNode *InstrNode = (InstructionNode *) calloc(1, sizeof(InstructionNode));
     if (!InstrNode) {
         ERROR("Calloc failed\n");
         exit(EXIT_FAILURE);
     }
-    InstrNode->earliestCycleCanRun = earliestCycleCanRun;
     InstrNode->instr = instr;
     InstrNode->next = NULL;
     return InstrNode;
@@ -497,9 +498,9 @@ InstructionQueue *InitInstructionQueue()
     return InstrQueue;
 }
 
-void Enqueue(InstructionQueue * InstrQueue, Instruction * instr, Heuristic HEURISTIC, int earliestCycleCanRun)
+void Enqueue(InstructionQueue * InstrQueue, Instruction * instr, Heuristic HEURISTIC)
 {
-    InstructionNode *InstrNode = InitInstructionNode(instr, earliestCycleCanRun);
+    InstructionNode *InstrNode = InitInstructionNode(instr);
     if (!InstrQueue->size) {
         InstrQueue->head = InstrQueue->tail = InstrNode;
         InstrQueue->size++;
@@ -556,10 +557,10 @@ Instruction *Dequeue(InstructionQueue * InstrQueue, int *cycle)
     InstructionNode *InstrNode, *lowestCycleInstrNode;
     InstrNode = lowestCycleInstrNode = InstrQueue->head;
     while (InstrNode != NULL) {
-        if (InstrNode->earliestCycleCanRun <= *cycle) {
+        if (InstrNode->instr->earliestCycleCanRun <= *cycle) {
             break;
         }
-        if (lowestCycleInstrNode->earliestCycleCanRun > InstrNode->earliestCycleCanRun) {
+        if (lowestCycleInstrNode->instr->earliestCycleCanRun > InstrNode->instr->earliestCycleCanRun) {
             lowestCycleInstrNode = InstrNode;
         }
         InstrNode = InstrNode->next;
@@ -567,7 +568,7 @@ Instruction *Dequeue(InstructionQueue * InstrQueue, int *cycle)
     if (!InstrNode) {
         InstrNode = lowestCycleInstrNode;
     }
-    *cycle = InstrNode->earliestCycleCanRun + 1;
+    *cycle = (*cycle + 1 > InstrNode->instr->earliestCycleCanRun + 1) ? *cycle + 1 : InstrNode->instr->earliestCycleCanRun + 1;
 
     Instruction *instr = InstrNode->instr;
     RemoveNode(InstrQueue, InstrNode);

@@ -26,7 +26,7 @@ Instruction *Schedule(Instruction *InstrList, Heuristic HEURISTIC) {
     instr = InstrList;
     do {
         if (!instr->dep1 && !instr->dep2 && !instr->anti) {
-            Enqueue(InstrQueue, instr, HEURISTIC, cycle);
+            Enqueue(InstrQueue, instr, HEURISTIC);
             instr->visited = 1;
         }
     } while ((instr = instr->next));
@@ -51,16 +51,28 @@ Instruction *Schedule(Instruction *InstrList, Heuristic HEURISTIC) {
                 continue;
             }
             if (instr->dep1 == i) {
+                if (cycle > instr->earliestCycleCanRun) {
+                    instr->earliestCycleCanRun = (cycle-1) + i->cycles;
+                }
                 instr->dep1 = NULL;
             }
             if (instr->dep2 == i) {
+                if (cycle > instr->earliestCycleCanRun) {
+                    instr->earliestCycleCanRun = (cycle-1) + i->cycles;
+                }
                 instr->dep2 = NULL;
             }
             if (instr->anti == i) {
+                if (cycle > instr->earliestCycleCanRun) {
+                    instr->earliestCycleCanRun = (cycle-1) + i->cycles;
+                }
                 instr->anti = NULL;
             }
             if (!instr->dep1 && !instr->dep2 && !instr->anti) {
-                Enqueue(InstrQueue, instr, HEURISTIC, (cycle-1) + i->cycles);
+                if (cycle > instr->earliestCycleCanRun) {
+                    instr->earliestCycleCanRun = cycle;
+                }
+                Enqueue(InstrQueue, instr, HEURISTIC);
                 instr->visited = 1;
             }
         }

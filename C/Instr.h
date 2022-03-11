@@ -23,6 +23,7 @@ struct InstructionInfo {
 	int field2;
 	int field3;
     int cycles;
+    int earliestCycleCanRun;
     int weight;
     int height;
     int visited;
@@ -34,7 +35,6 @@ struct InstructionInfo {
 };
 
 struct InstructionNode {
-    int earliestCycleCanRun;
     Instruction *instr;
     InstructionNode *next;
 };
