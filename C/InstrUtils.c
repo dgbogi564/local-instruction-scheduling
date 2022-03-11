@@ -509,7 +509,7 @@ void Enqueue(InstructionQueue * InstrQueue, Instruction * instr, Heuristic HEURI
     InstructionNode *i = InstrQueue->head;
     switch(HEURISTIC) {
         case LONGEST_LATENCY_PATH:
-            if (instr->weight > i->instr->weight || (instr->weight == i->instr->weight && instr->cycles > i->instr->cycles)) {
+            if (instr->weight > i->instr->weight) {
                 InstrNode->next = i;
                 InstrQueue->head = InstrNode;
             }
